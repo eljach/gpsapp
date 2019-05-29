@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% load static from staticfiles %}
+{% load i18n %}
+{% block title %}Agrega los tipos de unidad de tu proyecto{% endblock %}
+{% block main-container %}
+{% if confirm_form %}
+<section id="main-container">
+  <div class="container">
+    <div class="row">
+          <div class="col s12 welcome-title-wrapper">
+            <h1 class="welcome-title center">Confirm Upload if the results are right</h1>
+          </div>
+          <div class="center">
+          <form action="{% url "process_import" %}" method="POST">
+            {% csrf_token %}
+            {{ confirm_form.as_p }}
+            <div class="submit-row">
+              <a href="{% url "import" %}" class="btn custom-btn raised" style="color: #6c7383; background-color: #eee;">Cancel</a>
+              <button type="submit" class="btn custom-btn">Confirm Upload</button>
+            </div>
+          </form>
+          </div>
+
+          {% if result %}
+            {% if result.has_errors %}
+              <h2>Errores al cargar el archivo</h2>
+              <ul>
+                  {% for error in result.base_errors  %}
+                      <li>{{ error.error }}</li>
+                  {% endfor %}
+                  {% for line, errors in result.row_errors %}
+                      {% for error in errors %}
+                          <li>
+                            {% Linea: {{ line }} - {{ error.error }}
+                            <div class="traceback">{{ error.traceback|linebreaks }}</div>
+                          </li>
+                      {% endfor %}
+                  {% endfor %}
+              </ul>
+            {% else %}
+                <table id="datatable" class="center highlight confirm-import-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    {% for field in fields %}
+                      <th>{{ field }}</th>
+                    {% endfor %}
+                  </tr>
+                </thead>
+                {% for row in result.rows %}
+                    <tr>
+                        <td>
+                        {% if row.import_type == 'new' %}
+                            "New"
+                        {% elif row.import_type == 'skip' %}
+                            "Skipped"
+                        {% elif row.import_type == 'delete' %}
+                            "Delete"
+                        {% elif row.import_type == 'update' %}
+                            "Update"
+                        {% endif %}
+                        </td>
+                      {% for field in row.diff %}
+                      <td>
+                              {{ field }}
+                      </td>
+                      {% endfor %}
+                    </tr>
+                {% endfor %}
+                </table>
+            {% endif %}
+          {% endif %}
+    </div>
+  </div>
+</section>
+{% else %}
+  <section id="main-container">
+    <div class="container">
+      <div class="row">
+        <div class="col s12 welcome-title-wrapper">
+          <h1 class="welcome-title center">Import Positions</h1>
+        </div>
+        <div class="col s12 center">
+                <div class="row">
+                  <div class="col s12 m6 l4 push-m3 push-l4 uploadfile-box-wrapper">
+                    <div class="card small">
+                        <div>
+                          <img src="{% static "img/files.png" %}" style="margin-top: 13%; width: 80px;">
+                        </div>
+                        <img src="{% static "img/cloud.png" %}" style="width: 80px; margin-top: 7%;">
+                        <form action="{{ form_url }}" method="POST" id="{{ opts.module_name }}_form" enctype="multipart/form-data">
+                        {% csrf_token %}
+                          <div class="row">
+                              <!--Hardcoded form for Django CreateView-->
+                              {{form.errors}}
+                              <div class="col s8 m8 l8 offset-s2 offset-m2 offset-l2">
+                                <input class="inputfile" id="id_import_file" name="import_file" type="file" data-multiple-caption="{count} files selected" multiple />
+                                <label class="waves-effect waves-light btn custom-btn" for="id_import_file" style="margin-top: 15%;"><span style="font-weight: bold;"><i class="material-icons left">file_upload</i>Upload File</span></label>
+                              </div>
+                          </div>
+                          <input id="id_input_format" name="input_format" type="hidden" value="0" />
+                        </form>
+                    </div>
+                  </div>
+                </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% block custom-js %}
+  <script type="text/javascript">
+    'use strict';
+
+    ;( function ( document, window, index )
+    {
+        var input = $('.inputfile')[0];
+        var label = input.nextElementSibling;
+        var labelVal = label.innerHTML;
+
+        input.addEventListener( 'change', function( e )
+        {
+          var fileName = '';
+          if( this.files && this.files.length > 1 )
+            fileName = ( this.getAttribute( 'data-multiple-caption' ) || '' ).replace( '{count}', this.files.length );
+          else
+            fileName = e.target.value.split( '\\' ).pop();
+
+          if( fileName )
+            label.querySelector( 'span' ).innerHTML = fileName;
+          else
+            label.innerHTML = labelVal;
+
+          $("#{{ opts.module_name }}_form").submit();
+        });
+        // Firefox bug fix
+        input.addEventListener( 'focus', function(){ input.classList.add( 'has-focus' ); });
+        input.addEventListener( 'blur', function(){ input.classList.remove( 'has-focus' ); });
+    }( document, window, 0 ));
+  </script>
+  {% endblock %}
+{% endif %}
+{% endblock %}
